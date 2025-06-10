@@ -54,18 +54,6 @@ double matrixMultiplication(int size) {
     return sum;
 }
 
-EMSCRIPTEN_KEEPALIVE
-double numericalIntegration(int iterations) {
-    double dx = 1.0 / iterations;
-    double sum = 0.0;
-    
-    for (int i = 0; i < iterations; i++) {
-        double x = i * dx;
-        sum += sin(x) * cos(x) * exp(-x) * dx;
-    }
-    return sum;
-}
-
 int main() {
     return 0;
 }
