@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>WebAssembly vs JavaScript Performance Compare</title>
+    <link rel="stylesheet" href="index.css">
+</head>
+
+<body>
+    <h1>WebAssembly vs JavaScript Performance Comparison</h1>
+
+    <div class="container">
+        <h2>Recursive Fibonacci (O(2^N))</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>N</th>
+                    <th>WASM Result</th>
+                    <th>WASM Time</th>
+                    <th>JS Result</th>
+                    <th>JS Time</th>
+                    <th>Time Usage</th>
+                </tr>
+            </thead>
+            <tbody id="fibonacci-results">
+            </tbody>
+        </table>
+        <button onclick="runFibonacciTest()">Run Fibonacci Test</button>
+    </div>
+
+    <div class="container">
+        <h2>Prime Number Counting (O(N^3/2))</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Range (2 to N)</th>
+                    <th>WASM Result</th>
+                    <th>WASM Time</th>
+                    <th>JS Result</th>
+                    <th>JS Time</th>
+                    <th>Time Usage</th>
+                </tr>
+            </thead>
+            <tbody id="prime-results">
+            </tbody>
+        </table>
+        <button onclick="runPrimeTest()">Run Prime Test</button>
+    </div>
+
+    <div class="container">
+        <h2>Matrix Multiplication (O(N^3))</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Size</th>
+                    <th>WASM Result</th>
+                    <th>WASM Time</th>
+                    <th>JS Result</th>
+                    <th>JS Time</th>
+                    <th>Time Usage</th>
+                </tr>
+            </thead>
+            <tbody id="matrix-results">
+            </tbody>
+        </table>
+        <button onclick="runMatrixTest()">Run Matrix Test</button>
+    </div>
+
+    <script>
+
+        const primeNumbers = [1000000, 2000000, 4000000, 5000000];
+        const matrixSizes = [300, 500, 700, 900];
+        const fibonacciNumbers = [35, 37, 39, 41];
+        const integrationIterations = [100000, 500000, 1000000, 2000000];
+
+        let wasmModule;
+
+        const loadWasm = async () => {
+            try {
+                const module = await WebAssembly.instantiateStreaming(
+                    fetch('main.wasm')
+                );
+                wasmModule = module.instance.exports;
+                return true;
+            } catch (error) {
+                console.error('Failed to load WebAssembly:', error);
+                alert('Failed to load WebAssembly');
+                return false;
+            }
+        }
+
+        const initTables = () => {
+            initTable('prime-results', primeNumbers, n => `${n}`);
+            initTable('matrix-results', matrixSizes, n => `${n}x${n}`);
+            initTable('fibonacci-results', fibonacciNumbers, n => `F(${n})`);
+            initTable('integration-results', integrationIterations, n => `${n.toLocaleString()}`);
+        }
+
+        const initTable = (tableId, testData, labelFormatter) => {
+            const tbody = document.getElementById(tableId);
+            if (!tbody) {
+                console.error(`Table '${tableId}' is not found`);
+                return;
+            }
+            tbody.innerHTML = '';
+
+            testData.forEach(n => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${labelFormatter(n)}</td>
+                    <td id="${tableId}-wasm-result-${n}">-</td>
+                    <td id="${tableId}-wasm-time-${n}">-</td>
+                    <td id="${tableId}-js-result-${n}">-</td>
+                    <td id="${tableId}-js-time-${n}">-</td>
+                    <td id="${tableId}-speedup-${n}">-</td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        const updateResults = (tableId, n, wasmResult, wasmTime, jsResult, jsTime) => {
+            document.getElementById(`${tableId}-wasm-result-${n}`).textContent = wasmResult;
+            document.getElementById(`${tableId}-wasm-time-${n}`).textContent = `${wasmTime} ms`;
+            document.getElementById(`${tableId}-js-result-${n}`).textContent = jsResult;
+            document.getElementById(`${tableId}-js-time-${n}`).textContent = `${jsTime} ms`;
+
+            const percentChange = ((jsTime - wasmTime) / wasmTime * 100).toFixed(1);
+            const speedupElement = document.getElementById(`${tableId}-speedup-${n}`);
+            speedupElement.textContent = percentChange > 0 ? `+${percentChange}%` : `${percentChange}%`;
+            speedupElement.style.color = percentChange > 0 ? 'red' : 'green';
+        }
+
+        const isPrimeJs = (n) => {
+            if (n <= 1) return false;
+            if (n === 2) return true;
+            if (n % 2 === 0) return false;
+
+            const sqrtN = Math.floor(Math.sqrt(n));
+            for (let i = 3; i <= sqrtN; i += 2) {
+                if (n % i === 0) return false;
+            }
+            return true;
+        }
+
+        const countPrimesJs = (limit) => {
+            let count = 0;
+            for (let i = 2; i <= limit; i++) {
+                if (isPrimeJs(i)) count++;
+            }
+            return count;
+        }
+
+        const fibonacciRecursiveJs = (n) => {
+            if (n <= 1) return n;
+            return fibonacciRecursiveJs(n - 1) + fibonacciRecursiveJs(n - 2);
+        }
+
+        const matrixMultiplicationJs = (size) => {
+            let sum = 0;
+
+            for (let i = 0; i < size; i++) {
+                for (let j = 0; j < size; j++) {
+                    for (let k = 0; k < size; k++) {
+                        const a = (i + j + 1) / size;
+                        const b = (j + k + 1) / size;
+                        sum += a * b;
+                    }
+                }
+            }
+            return sum;
+        }
+
+        const runPrimeTest = () => {
+            primeNumbers.forEach(n => {
+                try {
+                    const wasmStartTime = performance.now();
+                    const wasmResult = wasmModule.countPrimes(n);
+                    const wasmEndTime = performance.now();
+                    const wasmTime = (wasmEndTime - wasmStartTime).toFixed(2);
+
+                    const jsStartTime = performance.now();
+                    const jsResult = countPrimesJs(n);
+                    const jsEndTime = performance.now();
+                    const jsTime = (jsEndTime - jsStartTime).toFixed(2);
+
+                    updateResults('prime-results', n, wasmResult, wasmTime, jsResult, jsTime);
+                } catch (error) {
+                    console.error(`Error in prime test for n=${n}:`, error);
+                }
+            });
+        }
+
+        const runMatrixTest = () => {
+            matrixSizes.forEach(size => {
+                try {
+                    const wasmStartTime = performance.now();
+                    const wasmResult = wasmModule.matrixMultiplication(size).toFixed(6);
+                    const wasmEndTime = performance.now();
+                    const wasmTime = (wasmEndTime - wasmStartTime).toFixed(2);
+
+                    const jsStartTime = performance.now();
+                    const jsResult = matrixMultiplicationJs(size).toFixed(6);
+                    const jsEndTime = performance.now();
+                    const jsTime = (jsEndTime - jsStartTime).toFixed(2);
+
+                    updateResults('matrix-results', size, wasmResult, wasmTime, jsResult, jsTime);
+                } catch (error) {
+                    console.error(`Error in matrix test for size=${size}:`, error);
+                }
+            });
+        }
+
+        const runFibonacciTest = () => {
+            fibonacciNumbers.forEach(n => {
+                try {
+                    const wasmStartTime = performance.now();
+                    const wasmResult = wasmModule.fibonacciRecursive(n);
+                    const wasmEndTime = performance.now();
+                    const wasmTime = (wasmEndTime - wasmStartTime).toFixed(2);
+
+                    const jsStartTime = performance.now();
+                    const jsResult = fibonacciRecursiveJs(n);
+                    const jsEndTime = performance.now();
+                    const jsTime = (jsEndTime - jsStartTime).toFixed(2);
+
+                    updateResults('fibonacci-results', n, wasmResult, wasmTime, jsResult, jsTime);
+                } catch (error) {
+                    console.error(`Error in fibonacci test for n=${n}:`, error);
+                }
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            const wasmLoaded = await loadWasm();
+            if (wasmLoaded) {
+                initTables();
+            }
+        });
+    </script>
+</body>
+
+</html>
