@@ -28,24 +28,6 @@
         <button onclick="runFibonacciTest()">Run Fibonacci Test</button>
     </div>
 
-    <div class="container">
-        <h2>Prime Number Counting (O(N^3/2))</h2>
-        <table>
-            <thead>
-                <tr>
-                    <th>Range (2 to N)</th>
-                    <th>WASM Result</th>
-                    <th>WASM Time</th>
-                    <th>JS Result</th>
-                    <th>JS Time</th>
-                    <th>Time Usage</th>
-                </tr>
-            </thead>
-            <tbody id="prime-results">
-            </tbody>
-        </table>
-        <button onclick="runPrimeTest()">Run Prime Test</button>
-    </div>
 
     <div class="container">
         <h2>Matrix Multiplication (O(N^3))</h2>
@@ -64,6 +46,25 @@
             </tbody>
         </table>
         <button onclick="runMatrixTest()">Run Matrix Test</button>
+    </div>
+
+    <div class="container">
+        <h2>Prime Number Counting (O(N^3/2))</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Range (2 to N)</th>
+                    <th>WASM Result</th>
+                    <th>WASM Time</th>
+                    <th>JS Result</th>
+                    <th>JS Time</th>
+                    <th>Time Usage</th>
+                </tr>
+            </thead>
+            <tbody id="prime-results">
+            </tbody>
+        </table>
+        <button onclick="runPrimeTest()">Run Prime Test</button>
     </div>
 
     <script>
@@ -135,7 +136,7 @@
             if (n === 2) return true;
             if (n % 2 === 0) return false;
 
-            const sqrtN = Math.floor(Math.sqrt(n));
+            const sqrtN = Math.sqrt(n);
             for (let i = 3; i <= sqrtN; i += 2) {
                 if (n % i === 0) return false;
             }
